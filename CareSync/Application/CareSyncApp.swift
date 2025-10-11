@@ -25,7 +25,7 @@ struct CareSyncApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ScanCode()
         }
         .modelContainer(sharedModelContainer)
     }
