@@ -7,6 +7,7 @@
 
 import SwiftUI
 import VisionKit
+import Vision
 
 struct ScanCode: View {
     @State private var scannedCode: String?
@@ -53,7 +54,11 @@ struct BarcodeScannerView: UIViewControllerRepresentable {
 
     func makeUIViewController(context: Context) -> DataScannerViewController {
         let scanner = DataScannerViewController(
-            recognizedDataTypes: [.barcode()],
+            recognizedDataTypes: [
+                .barcode(symbologies: [
+                    .ean8, .ean13, .upce, .code39, .code93, .code128, .itf14, .i2of5
+                ])
+            ],
             qualityLevel: .accurate,
             recognizesMultipleItems: false,
             isHighFrameRateTrackingEnabled: false,
