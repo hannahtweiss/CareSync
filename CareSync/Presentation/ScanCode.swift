@@ -8,13 +8,18 @@
 import SwiftUI
 import VisionKit
 import Vision
+import SwiftData
 
 struct ScanCode: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
     @State private var scannedCode: String?
     @State private var isShowingScanner = false
     @State private var isLoadingMedication = false
     @State private var scannedMedication: Medication?
     @State private var errorMessage: String?
+    @State private var showingMedicationSheet = false
 
     var body: some View {
         NavigationStack {
@@ -23,60 +28,69 @@ struct ScanCode: View {
                     VStack(spacing: 12) {
                         ProgressView()
                         Text("Looking up medication...")
+                            .font(.system(size: 20))
                             .foregroundColor(.secondary)
                     }
                     .padding()
-                } else if let medication = scannedMedication {
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Medication Found")
-                            .font(.headline)
+                } else {
+                    VStack(spacing: 20) {
+                        Image(systemName: "barcode.viewfinder")
+                            .font(.system(size: 80))
+                            .foregroundColor(.blue)
 
-                        VStack(alignment: .leading, spacing: 8) {
-                            LabeledContent("Brand:", value: medication.brandName)
-                            LabeledContent("Generic:", value: medication.genericName)
-                            LabeledContent("Dosage:", value: medication.dosage)
-                            LabeledContent("Form:", value: medication.form)
+                        Text("Scan Medication Barcode")
+                            .font(.system(size: 28, weight: .bold))
+                            .multilineTextAlignment(.center)
+
+                        Text("Point your camera at the barcode on your medication bottle")
+                            .font(.system(size: 18))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+
+                        Button("Start Scanning") {
+                            isShowingScanner = true
+                            scannedMedication = nil
+                            errorMessage = nil
                         }
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    }
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(8)
-                } else if let code = scannedCode {
-                    VStack(spacing: 12) {
-                        Text("Scanned Barcode")
-                            .font(.headline)
-                        Text(code)
-                            .font(.system(.body, design: .monospaced))
-                            .padding()
-                            .background(Color(.secondarySystemBackground))
-                            .cornerRadius(8)
-                    }
-                    .padding()
-                }
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 16)
+                        .background(Color.blue)
+                        .cornerRadius(12)
 
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                        .font(.caption)
-                        .foregroundColor(.red)
-                        .padding()
+                        if let errorMessage = errorMessage {
+                            Text(errorMessage)
+                                .font(.system(size: 16))
+                                .foregroundColor(.red)
+                                .multilineTextAlignment(.center)
+                                .padding()
+                        }
+                    }
                 }
-
-                Button("Start Scanning") {
-                    isShowingScanner = true
-                    scannedMedication = nil
-                    errorMessage = nil
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(isLoadingMedication)
 
                 Spacer()
             }
-            .navigationTitle("Scan Barcode")
+            .navigationTitle("Add Medication")
+            .navigationBarTitleDisplayMode(.large)
             .sheet(isPresented: $isShowingScanner) {
                 BarcodeScannerView(scannedCode: $scannedCode, isPresented: $isShowingScanner)
                     .ignoresSafeArea()
+            }
+            .sheet(isPresented: $showingMedicationSheet) {
+                if let medication = scannedMedication {
+                    MedicationDetailSheet(
+                        medication: medication,
+                        onAdd: {
+                            saveMedication()
+                        },
+                        onCancel: {
+                            showingMedicationSheet = false
+                            scannedMedication = nil
+                        }
+                    )
+                }
             }
             .onChange(of: scannedCode) { oldValue, newValue in
                 if let newValue = newValue {
@@ -92,16 +106,38 @@ struct ScanCode: View {
         isLoadingMedication = true
         errorMessage = nil
 
-        let medication = await MedicationAPIService.lookupMedication(barcode: barcode)
+        var medication = await MedicationAPIService.lookupMedication(barcode: barcode)
 
         await MainActor.run {
             isLoadingMedication = false
-            if let medication = medication {
+            if var medication = medication {
+                // Parse dosage to get simplified instructions and times per day
+                medication.timesPerDay = DosageParser.parseTimesPerDay(from: medication.schedule)
+                medication.simplifiedInstructions = DosageParser.simplifyInstructions(
+                    from: medication.schedule,
+                    form: medication.form
+                )
+
                 scannedMedication = medication
+                showingMedicationSheet = true
             } else {
                 errorMessage = "Medication not found for barcode: \(barcode)"
             }
         }
+    }
+
+    private func saveMedication() {
+        guard let medication = scannedMedication else { return }
+
+        modelContext.insert(medication)
+
+        // Dismiss both sheets
+        showingMedicationSheet = false
+        dismiss()
+
+        // Reset state
+        scannedMedication = nil
+        scannedCode = nil
     }
 }
 

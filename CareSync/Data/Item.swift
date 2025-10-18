@@ -22,6 +22,11 @@ final class Medication {
     var imageURL: String?
     var timestamp: Date
 
+    // Parsed scheduling information
+    var timesPerDay: Int
+    var simplifiedInstructions: String
+    var isActive: Bool
+
     init(
         brandName: String,
         genericName: String,
@@ -33,7 +38,10 @@ final class Medication {
         ndcCode: String? = nil,
         productDescription: String? = nil,
         imageURL: String? = nil,
-        timestamp: Date = Date()
+        timestamp: Date = Date(),
+        timesPerDay: Int = 1,
+        simplifiedInstructions: String = "",
+        isActive: Bool = true
     ) {
         self.brandName = brandName
         self.genericName = genericName
@@ -46,5 +54,8 @@ final class Medication {
         self.productDescription = productDescription
         self.imageURL = imageURL
         self.timestamp = timestamp
+        self.timesPerDay = timesPerDay
+        self.simplifiedInstructions = simplifiedInstructions
+        self.isActive = isActive
     }
 }
