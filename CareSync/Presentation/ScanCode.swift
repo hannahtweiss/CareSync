@@ -12,11 +12,38 @@ import Vision
 struct ScanCode: View {
     @State private var scannedCode: String?
     @State private var isShowingScanner = false
+    @State private var isLoadingMedication = false
+    @State private var scannedMedication: Medication?
+    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 20) {
-                if let code = scannedCode {
+                if isLoadingMedication {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Looking up medication...")
+                            .foregroundColor(.secondary)
+                    }
+                    .padding()
+                } else if let medication = scannedMedication {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Medication Found")
+                            .font(.headline)
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            LabeledContent("Brand:", value: medication.brandName)
+                            LabeledContent("Generic:", value: medication.genericName)
+                            LabeledContent("Dosage:", value: medication.dosage)
+                            LabeledContent("Form:", value: medication.form)
+                        }
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    }
+                    .padding()
+                    .background(Color(.secondarySystemBackground))
+                    .cornerRadius(8)
+                } else if let code = scannedCode {
                     VStack(spacing: 12) {
                         Text("Scanned Barcode")
                             .font(.headline)
@@ -29,15 +56,50 @@ struct ScanCode: View {
                     .padding()
                 }
 
+                if let errorMessage = errorMessage {
+                    Text(errorMessage)
+                        .font(.caption)
+                        .foregroundColor(.red)
+                        .padding()
+                }
+
                 Button("Start Scanning") {
                     isShowingScanner = true
+                    scannedMedication = nil
+                    errorMessage = nil
                 }
                 .buttonStyle(.borderedProminent)
+                .disabled(isLoadingMedication)
+
+                Spacer()
             }
             .navigationTitle("Scan Barcode")
             .sheet(isPresented: $isShowingScanner) {
                 BarcodeScannerView(scannedCode: $scannedCode, isPresented: $isShowingScanner)
                     .ignoresSafeArea()
+            }
+            .onChange(of: scannedCode) { oldValue, newValue in
+                if let newValue = newValue {
+                    Task {
+                        await lookupMedication(barcode: newValue)
+                    }
+                }
+            }
+        }
+    }
+
+    private func lookupMedication(barcode: String) async {
+        isLoadingMedication = true
+        errorMessage = nil
+
+        let medication = await MedicationAPIService.lookupMedication(barcode: barcode)
+
+        await MainActor.run {
+            isLoadingMedication = false
+            if let medication = medication {
+                scannedMedication = medication
+            } else {
+                errorMessage = "Medication not found for barcode: \(barcode)"
             }
         }
     }
