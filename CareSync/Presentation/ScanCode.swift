@@ -74,6 +74,17 @@ struct ScanCode: View {
             }
             .navigationTitle("Add Medication")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(.gray)
+                    }
+                }
+            }
             .sheet(isPresented: $isShowingScanner) {
                 BarcodeScannerView(scannedCode: $scannedCode, isPresented: $isShowingScanner)
                     .ignoresSafeArea()
@@ -106,11 +117,11 @@ struct ScanCode: View {
         isLoadingMedication = true
         errorMessage = nil
 
-        var medication = await MedicationAPIService.lookupMedication(barcode: barcode)
+        let medication = await MedicationAPIService.lookupMedication(barcode: barcode)
 
         await MainActor.run {
             isLoadingMedication = false
-            if var medication = medication {
+            if let medication {
                 // Parse dosage to get simplified instructions and times per day
                 medication.timesPerDay = DosageParser.parseTimesPerDay(from: medication.schedule)
                 medication.simplifiedInstructions = DosageParser.simplifyInstructions(
