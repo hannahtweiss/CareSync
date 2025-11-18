@@ -17,10 +17,11 @@ final class Medication {
     var schedule: String
     var duration: String
     var ndcCode: String?
-    var upcCode: String
+    var upcCode: String?
     var productDescription: String?
     var imageURL: String?
     var timestamp: Date
+    var warnings: String?  // Important warnings from prescription label
 
     // Parsed scheduling information
     var timesPerDay: Int
@@ -35,11 +36,12 @@ final class Medication {
         form: String,
         schedule: String,
         duration: String,
-        upcCode: String,
+        upcCode: String? = nil,
         ndcCode: String? = nil,
         productDescription: String? = nil,
         imageURL: String? = nil,
         timestamp: Date = Date(),
+        warnings: String? = nil,
         timesPerDay: Int = 1,
         simplifiedInstructions: String = "",
         isActive: Bool = true,
@@ -56,6 +58,7 @@ final class Medication {
         self.productDescription = productDescription
         self.imageURL = imageURL
         self.timestamp = timestamp
+        self.warnings = warnings
         self.timesPerDay = timesPerDay
         self.simplifiedInstructions = simplifiedInstructions
         self.isActive = isActive

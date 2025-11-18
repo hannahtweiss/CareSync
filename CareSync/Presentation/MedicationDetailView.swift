@@ -99,9 +99,11 @@ struct MedicationDetailView: View {
                                 .foregroundColor(.secondary)
 
                             VStack(alignment: .leading, spacing: 4) {
-                                Text("UPC: \(medication.upcCode)")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.primary)
+                                if let upcCode = medication.upcCode {
+                                    Text("UPC: \(upcCode)")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.primary)
+                                }
 
                                 if let ndcCode = medication.ndcCode {
                                     Text("NDC: \(ndcCode)")
