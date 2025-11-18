@@ -10,30 +10,44 @@ import Foundation
 struct MedicationAPIService {
     private static let baseURL = "https://api.upcitemdb.com/prod/trial/lookup"
 
-    static func lookupMedication(barcode: String) async -> Medication? {
+    static func lookupMedication(barcode: String) async -> (Medication?, String?) {
         let urlString = "\(baseURL)?upc=\(barcode)"
 
         guard let url = URL(string: urlString) else {
             print("Invalid URL for barcode: \(barcode)")
-            return nil
+            return (nil, "Invalid barcode format")
         }
 
         do {
+            print("Fetching medication for barcode: \(barcode)")
             let (data, response) = try await URLSession.shared.data(from: url)
 
-            guard let httpResponse = response as? HTTPURLResponse,
-                  httpResponse.statusCode == 200 else {
-                print("Invalid response status code")
-                return nil
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("Invalid HTTP response")
+                return (nil, "Network error occurred")
+            }
+
+            print("HTTP Status Code: \(httpResponse.statusCode)")
+
+            guard httpResponse.statusCode == 200 else {
+                if httpResponse.statusCode == 404 {
+                    return (nil, "Medication not found in database")
+                } else {
+                    return (nil, "Server error (code: \(httpResponse.statusCode))")
+                }
             }
 
             let decoder = JSONDecoder()
             let result = try decoder.decode(UPCItemDBResponse.self, from: data)
 
+            print("API Response - Total items: \(result.total)")
+
             guard let item = result.items.first else {
                 print("No medication found for barcode: \(barcode)")
-                return nil
+                return (nil, "No product found for this barcode")
             }
+
+            print("Found item: \(item.title)")
 
             // Extract medication information from the product data
             let brandName = item.brand ?? "Unknown"
@@ -59,10 +73,11 @@ struct MedicationAPIService {
                 imageURL: item.images?.first
             )
 
-            return medication
+            print("Successfully created medication: \(medication.brandName)")
+            return (medication, nil)
         } catch {
             print("Error fetching medication: \(error)")
-            return nil
+            return (nil, "Error: \(error.localizedDescription)")
         }
     }
 

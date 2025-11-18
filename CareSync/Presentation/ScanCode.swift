@@ -60,12 +60,32 @@ struct ScanCode: View {
                         .background(Color.blue)
                         .cornerRadius(12)
 
-                        if let errorMessage = errorMessage {
-                            Text(errorMessage)
-                                .font(.system(size: 16))
-                                .foregroundColor(.red)
-                                .multilineTextAlignment(.center)
-                                .padding()
+                        if let errorMsg = errorMessage {
+                            VStack(spacing: 12) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.system(size: 40))
+                                    .foregroundColor(.orange)
+
+                                Text("Scan Failed")
+                                    .font(.system(size: 20, weight: .bold))
+                                    .foregroundColor(.primary)
+
+                                Text(errorMsg)
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.center)
+
+                                Button("Try Again") {
+                                    self.errorMessage = nil
+                                    self.isShowingScanner = true
+                                }
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.blue)
+                            }
+                            .padding()
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                            .padding(.horizontal)
                         }
                     }
                 }
@@ -117,24 +137,71 @@ struct ScanCode: View {
         isLoadingMedication = true
         errorMessage = nil
 
-        let medication = await MedicationAPIService.lookupMedication(barcode: barcode)
+        print("Starting medication lookup for barcode: \(barcode)")
+        let (medication, apiError) = await MedicationAPIService.lookupMedication(barcode: barcode)
 
         await MainActor.run {
             isLoadingMedication = false
             if let medication {
+                print("Medication found, processing...")
                 // Parse dosage to get simplified instructions and times per day
-                medication.timesPerDay = DosageParser.parseTimesPerDay(from: medication.schedule)
-                medication.simplifiedInstructions = DosageParser.simplifyInstructions(
+                let timesPerDay = DosageParser.parseTimesPerDay(from: medication.schedule)
+                let simplifiedInstructions = DosageParser.simplifyInstructions(
                     from: medication.schedule,
                     form: medication.form
                 )
 
+                medication.timesPerDay = timesPerDay
+                medication.simplifiedInstructions = simplifiedInstructions
+
+                // Regenerate scheduled times based on the parsed timesPerDay
+                medication.scheduledTimes = generateScheduledTimes(count: timesPerDay)
+
                 scannedMedication = medication
                 showingMedicationSheet = true
+                print("Showing medication detail sheet")
             } else {
-                errorMessage = "Medication not found for barcode: \(barcode)"
+                // Show detailed error message from API
+                let message = apiError ?? "Medication not found for barcode: \(barcode)"
+                errorMessage = message
+                print("Error: \(message)")
             }
         }
+    }
+
+    private func generateScheduledTimes(count: Int) -> [Date] {
+        let calendar = Calendar.current
+        var times: [Date] = []
+
+        switch count {
+        case 1:
+            // Once daily at 9:00 AM
+            times.append(calendar.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date())
+        case 2:
+            // Twice daily at 9:00 AM and 9:00 PM
+            times.append(calendar.date(bySettingHour: 9, minute: 0, second: 0, of: Date()) ?? Date())
+            times.append(calendar.date(bySettingHour: 21, minute: 0, second: 0, of: Date()) ?? Date())
+        case 3:
+            // Three times daily at 8:00 AM, 2:00 PM, 8:00 PM
+            times.append(calendar.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) ?? Date())
+            times.append(calendar.date(bySettingHour: 14, minute: 0, second: 0, of: Date()) ?? Date())
+            times.append(calendar.date(bySettingHour: 20, minute: 0, second: 0, of: Date()) ?? Date())
+        case 4:
+            // Four times daily at 8:00 AM, 12:00 PM, 4:00 PM, 8:00 PM
+            times.append(calendar.date(bySettingHour: 8, minute: 0, second: 0, of: Date()) ?? Date())
+            times.append(calendar.date(bySettingHour: 12, minute: 0, second: 0, of: Date()) ?? Date())
+            times.append(calendar.date(bySettingHour: 16, minute: 0, second: 0, of: Date()) ?? Date())
+            times.append(calendar.date(bySettingHour: 20, minute: 0, second: 0, of: Date()) ?? Date())
+        default:
+            // For more than 4 times, space them evenly throughout the day
+            let hoursApart = 24 / max(count, 1)
+            for i in 0..<count {
+                let hour = 8 + (i * hoursApart)
+                times.append(calendar.date(bySettingHour: hour % 24, minute: 0, second: 0, of: Date()) ?? Date())
+            }
+        }
+
+        return times
     }
 
     private func saveMedication() {
