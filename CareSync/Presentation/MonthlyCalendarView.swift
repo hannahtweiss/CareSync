@@ -26,7 +26,7 @@ struct MonthlyCalendarView: View {
                     Button(action: { changeMonth(by: -1) }) {
                         Image(systemName: "chevron.left")
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color.Theme.primary)
                             .padding()
                     }
 
@@ -40,7 +40,7 @@ struct MonthlyCalendarView: View {
                     Button(action: { changeMonth(by: 1) }) {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 20, weight: .semibold))
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color.Theme.primary)
                             .padding()
                     }
                 }
@@ -103,13 +103,14 @@ struct MonthlyCalendarView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 40)
                         } else {
-                            ForEach(medicationsForSelectedDay, id: \.medication.upcCode) { item in
+                            // Flatten medication times into individual cards
+                            ForEach(flattenedMedicationTimes) { timeItem in
                                 MedicationTimeCard(
-                                    medication: item.medication,
-                                    times: item.times
+                                    medication: timeItem.medication,
+                                    time: timeItem.time
                                 )
+                                .padding(.horizontal)
                             }
-                            .padding(.horizontal)
                         }
                     }
                 }
@@ -171,6 +172,22 @@ struct MonthlyCalendarView: View {
         }
     }
 
+    struct MedicationTimeItem: Identifiable {
+        let id = UUID()
+        let medication: Medication
+        let time: Date
+    }
+
+    private var flattenedMedicationTimes: [MedicationTimeItem] {
+        var items: [MedicationTimeItem] = []
+        for medItem in medicationsForSelectedDay {
+            for time in medItem.times {
+                items.append(MedicationTimeItem(medication: medItem.medication, time: time))
+            }
+        }
+        return items.sorted { $0.time < $1.time }
+    }
+
     // MARK: - Helper Methods
 
     private func changeMonth(by value: Int) {
@@ -204,11 +221,11 @@ struct DayCell: View {
             VStack(spacing: 4) {
                 Text(dayNumber)
                     .font(.system(size: 18, weight: isSelected ? .bold : .regular))
-                    .foregroundColor(isSelected ? .white : isToday ? .blue : .primary)
+                    .foregroundColor(isSelected ? .white : isToday ? Color.Theme.primary : .primary)
 
                 if hasMedications {
                     Circle()
-                        .fill(isSelected ? Color.white : Color.blue)
+                        .fill(isSelected ? Color.white : Color.Theme.primary)
                         .frame(width: 6, height: 6)
                 } else {
                     Circle()
@@ -220,7 +237,7 @@ struct DayCell: View {
             .frame(height: 50)
             .background(
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(isSelected ? Color.blue : (isToday ? Color.blue.opacity(0.1) : Color.clear))
+                    .fill(isSelected ? Color.Theme.primary : (isToday ? Color.Theme.primary.opacity(0.1) : Color.clear))
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -231,64 +248,75 @@ struct DayCell: View {
 
 struct MedicationTimeCard: View {
     let medication: Medication
-    let times: [Date]
+    let time: Date
+    @State private var isTaken: Bool = false
     var onTap: (() -> Void)? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                Image(systemName: "pills.fill")
-                    .font(.system(size: 24))
-                    .foregroundColor(.blue)
+        Button(action: {
+            onTap?()
+        }) {
+            HStack(spacing: 14) {
+                // Medication icon with checkmark
+                ZStack(alignment: .bottomTrailing) {
+                    ZStack {
+                        Circle()
+                            .fill(medication.displayColor.opacity(0.2))
+                            .frame(width: 52, height: 52)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Button(action: {
-                        onTap?()
-                    }) {
-                        Text(medication.brandName)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.primary)
+                        Image(systemName: medication.formIcon)
+                            .font(.system(size: 26))
+                            .foregroundColor(medication.displayColor)
                     }
-                    .buttonStyle(PlainButtonStyle())
+
+                    // Checkmark indicator
+                    if isTaken {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 22, height: 22)
+                            .overlay(
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                            )
+                            .offset(x: 4, y: 4)
+                    }
+                }
+
+                // Medication info
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(medication.brandName)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.primary)
 
                     Text(medication.dosage)
-                        .font(.system(size: 16))
+                        .font(.system(size: 15))
                         .foregroundColor(.secondary)
                 }
 
                 Spacer()
+
+                // Time
+                Text(formatTime(time))
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                // Chevron
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.secondary.opacity(0.5))
             }
-
-            // Scheduled times
-            VStack(alignment: .leading, spacing: 8) {
-                ForEach(times, id: \.self) { time in
-                    HStack(spacing: 12) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(.orange)
-
-                        Text(formatTime(time))
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundColor(.primary)
-
-                        Spacer()
-
-                        // Checkmark button (placeholder for future functionality)
-                        Image(systemName: "circle")
-                            .font(.system(size: 20))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 8)
-                    .padding(.horizontal, 12)
-                    .background(Color(.systemGray6))
-                    .cornerRadius(8)
-                }
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .background(Color(.systemGray6).opacity(0.5))
+            .cornerRadius(14)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .onTapGesture {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                isTaken.toggle()
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
 
     private func formatTime(_ date: Date) -> String {

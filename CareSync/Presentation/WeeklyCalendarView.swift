@@ -85,13 +85,13 @@ struct DayCubbyView: View {
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.white)
                         .frame(minWidth: 36, minHeight: 36)
-                        .background(Color.blue)
+                        .background(Color.Theme.primary)
                         .clipShape(Circle())
 
                     // Chevron indicator
                     Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color.Theme.primary)
                 }
                 .padding()
                 .background(Color(.systemGray6))
@@ -128,11 +128,16 @@ struct MedicationRowView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            // Pill icon
-            Image(systemName: "pills.fill")
-                .font(.system(size: 28))
-                .foregroundColor(.blue)
-                .frame(width: 40)
+            // Medication icon with color
+            ZStack {
+                Circle()
+                    .fill(medication.displayColor.opacity(0.2))
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: medication.formIcon)
+                    .font(.system(size: 24))
+                    .foregroundColor(medication.displayColor)
+            }
 
             // Medication info
             VStack(alignment: .leading, spacing: 6) {
@@ -147,7 +152,7 @@ struct MedicationRowView: View {
                 if medication.timesPerDay > 1 {
                     Text("\(medication.timesPerDay) times today")
                         .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color.Theme.primary)
                 }
             }
 

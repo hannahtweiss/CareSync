@@ -39,7 +39,7 @@ struct ReportsView: View {
                                 title: "Total Medications",
                                 value: "\(allMedications.count)",
                                 icon: "pills.fill",
-                                color: .blue
+                                color: Color.Theme.primary
                             )
 
                             SummaryCard(
@@ -72,7 +72,7 @@ struct ReportsView: View {
 
                                         Text("\(form.value)")
                                             .font(.system(size: 18, weight: .semibold))
-                                            .foregroundColor(.blue)
+                                            .foregroundColor(Color.Theme.primary)
                                     }
                                     .padding()
                                     .background(Color(.systemGray6))

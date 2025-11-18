@@ -19,9 +19,15 @@ struct MedicationDetailView: View {
                 VStack(spacing: 24) {
                     // Medication Name
                     VStack(spacing: 12) {
-                        Image(systemName: "pills.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.blue)
+                        ZStack {
+                            Circle()
+                                .fill(medication.displayColor.opacity(0.2))
+                                .frame(width: 120, height: 120)
+
+                            Image(systemName: medication.formIcon)
+                                .font(.system(size: 60))
+                                .foregroundColor(medication.displayColor)
+                        }
 
                         Text(medication.brandName)
                             .font(.system(size: 32, weight: .bold))

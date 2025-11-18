@@ -65,7 +65,7 @@ struct MedicationDetailSheet: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 20)
-                        .background(Color.blue)
+                        .background(Color.Theme.primary)
                         .cornerRadius(16)
                 }
 

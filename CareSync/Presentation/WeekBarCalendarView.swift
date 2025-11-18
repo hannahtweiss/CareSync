@@ -19,8 +19,9 @@ struct WeekBarCalendarView: View {
     @State private var displayMonth = Date()  // The month shown in the header
     @State private var showingMonthView = false  // Toggle between week and month views
     @State private var swipeDirection: SwipeDirection? = nil  // Track swipe animation
-    @State private var medicationToEdit: Medication? = nil
-    @State private var showingEditSheet = false
+    @State private var selectedMedication: Medication? = nil
+    @State private var selectedMedicationTime: Date? = nil
+    @State private var showingActionSheet = false
 
     private let calendar = Calendar.current
     private let totalWeeks = 52  // Show 52 weeks worth of data (1 year)
@@ -40,7 +41,7 @@ struct WeekBarCalendarView: View {
                         Button(action: { changeMonth(by: -1) }) {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color.Theme.primary)
                         }
                         .frame(width: 44, height: 44)
 
@@ -59,7 +60,7 @@ struct WeekBarCalendarView: View {
 
                                     Image(systemName: showingMonthView ? "chevron.up" : "chevron.down")
                                         .font(.system(size: 14, weight: .semibold))
-                                        .foregroundColor(.blue)
+                                        .foregroundColor(Color.Theme.primary)
                                 }
                             }
 
@@ -75,7 +76,7 @@ struct WeekBarCalendarView: View {
                                     .foregroundColor(.white)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
-                                    .background(Color.blue)
+                                    .background(Color.Theme.primary)
                                     .cornerRadius(16)
                                 }
                                 .transition(.scale.combined(with: .opacity))
@@ -87,7 +88,7 @@ struct WeekBarCalendarView: View {
                         Button(action: { changeMonth(by: 1) }) {
                             Image(systemName: "chevron.right")
                                 .font(.system(size: 18, weight: .semibold))
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color.Theme.primary)
                         }
                         .frame(width: 44, height: 44)
                     }
@@ -136,53 +137,116 @@ struct WeekBarCalendarView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                // "Today" label
+                                if calendar.isDateInToday(selectedDate) {
+                                    Text("Today")
+                                        .font(.system(size: 14))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                // Full date
                                 Text(selectedDayString)
-                                    .font(.system(size: 26, weight: .bold))
+                                    .font(.system(size: 24, weight: .bold))
 
                                 if !activeMedications.isEmpty {
                                     Text("\(totalDosesToday) dose\(totalDosesToday == 1 ? "" : "s") today")
-                                        .font(.system(size: 16))
+                                        .font(.system(size: 14))
                                         .foregroundColor(.secondary)
+                                        .padding(.top, 4)
                                 }
                             }
 
                             Spacer()
                         }
                         .padding(.horizontal)
-                        .padding(.top, 20)
+                        .padding(.top, 16)
 
                         if medicationsForSelectedDay.isEmpty {
-                            VStack(spacing: 16) {
+                            VStack(spacing: 24) {
                                 Spacer()
-                                    .frame(height: 60)
+                                    .frame(height: 40)
 
-                                Image(systemName: "pills.circle")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.secondary)
+                                // Illustration
+                                ZStack {
+                                    // Background pills
+                                    Image(systemName: "pills.fill")
+                                        .font(.system(size: 100))
+                                        .foregroundColor(Color.Theme.primary.opacity(0.8))
+                                        .rotationEffect(.degrees(15))
 
-                                Text("No medications scheduled")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.secondary)
+                                    // Plus symbols around
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundColor(Color.Theme.accent)
+                                        .offset(x: -60, y: -40)
 
-                                Text("Tap + to add your first medication")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundColor(Color.yellow)
+                                        .offset(x: 50, y: -50)
+
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 18, weight: .bold))
+                                        .foregroundColor(Color.Theme.secondary)
+                                        .offset(x: 60, y: 30)
+
+                                    // Pill icon overlay
+                                    Image(systemName: "pill.fill")
+                                        .font(.system(size: 35))
+                                        .foregroundColor(.yellow)
+                                        .offset(x: -20, y: -30)
+                                }
+                                .frame(height: 180)
+                                .padding(.vertical, 20)
+
+                                VStack(spacing: 8) {
+                                    Text("Here you'll see your schedule\nfor the day")
+                                        .font(.system(size: 22, weight: .semibold))
+                                        .foregroundColor(.primary)
+                                        .multilineTextAlignment(.center)
+
+                                    Text("for this add a new medicine")
+                                        .font(.system(size: 16))
+                                        .foregroundColor(.secondary)
+                                }
+
+                                Spacer()
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 40)
+                            .padding(.horizontal, 32)
                         } else {
-                            ForEach(medicationsForSelectedDay, id: \.medication.upcCode) { item in
-                                MedicationTimeCard(
-                                    medication: item.medication,
-                                    times: item.times,
-                                    onTap: {
-                                        medicationToEdit = item.medication
-                                        showingEditSheet = true
+                            // Group medications by time of day
+                            ForEach(groupedMedicationsByTimeOfDay, id: \.period) { group in
+                                VStack(alignment: .leading, spacing: 12) {
+                                    // Time period header
+                                    HStack(spacing: 8) {
+                                        Image(systemName: group.icon)
+                                            .font(.system(size: 16))
+                                            .foregroundColor(.secondary)
+
+                                        Text(group.period)
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.secondary)
                                     }
-                                )
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, group.period == groupedMedicationsByTimeOfDay.first?.period ? 0 : 12)
+
+                                    // Medications for this time period
+                                    ForEach(group.items, id: \.id) { item in
+                                        MedicationTimeCard(
+                                            medication: item.medication,
+                                            time: item.time,
+                                            onTap: {
+                                                selectedMedication = item.medication
+                                                selectedMedicationTime = item.time
+                                                showingActionSheet = true
+                                            }
+                                        )
+                                    }
+                                }
                             }
-                            .padding(.horizontal)
+                            .padding(.horizontal, 16)
                         }
 
                         Spacer()
@@ -227,19 +291,11 @@ struct WeekBarCalendarView: View {
         .onAppear {
             displayMonth = selectedDate
         }
-        .sheet(isPresented: $showingEditSheet) {
-            if let medication = medicationToEdit {
-                AddMedicationSheet(
+        .sheet(isPresented: $showingActionSheet) {
+            if let medication = selectedMedication, let time = selectedMedicationTime {
+                MedicationActionSheet(
                     medication: medication,
-                    onAdd: { updatedMedication in
-                        // Save changes to the model context
-                        try? modelContext.save()
-                        showingEditSheet = false
-                    },
-                    onCancel: {
-                        // Dismiss without saving
-                        showingEditSheet = false
-                    }
+                    scheduledTime: time
                 )
             }
         }
@@ -263,16 +319,8 @@ struct WeekBarCalendarView: View {
 
     private var selectedDayString: String {
         let formatter = DateFormatter()
-        if calendar.isDateInToday(selectedDate) {
-            return "Today"
-        } else if calendar.isDateInTomorrow(selectedDate) {
-            return "Tomorrow"
-        } else if calendar.isDateInYesterday(selectedDate) {
-            return "Yesterday"
-        } else {
-            formatter.dateFormat = "EEEE, MMMM d"
-            return formatter.string(from: selectedDate)
-        }
+        formatter.dateFormat = "EEEE, MMMM d"
+        return formatter.string(from: selectedDate)
     }
 
     private var medicationsForSelectedDay: [(medication: Medication, times: [Date])] {
@@ -287,6 +335,67 @@ struct WeekBarCalendarView: View {
 
     private var isViewingCurrentWeek: Bool {
         currentWeekOffset == 0
+    }
+
+    // MARK: - Time of Day Grouping
+
+    struct MedicationTimeItem: Identifiable {
+        let id = UUID()
+        let medication: Medication
+        let time: Date
+    }
+
+    struct TimeOfDayGroup: Identifiable {
+        let id = UUID()
+        let period: String
+        let icon: String
+        let items: [MedicationTimeItem]
+    }
+
+    private var groupedMedicationsByTimeOfDay: [TimeOfDayGroup] {
+        // Flatten all medication times into individual items
+        var allItems: [MedicationTimeItem] = []
+        for medItem in medicationsForSelectedDay {
+            for time in medItem.times {
+                allItems.append(MedicationTimeItem(medication: medItem.medication, time: time))
+            }
+        }
+
+        // Sort by time
+        allItems.sort { $0.time < $1.time }
+
+        // Group by time of day
+        let grouped = Dictionary(grouping: allItems) { item in
+            getTimeOfDay(for: item.time)
+        }
+
+        // Create TimeOfDayGroup objects and sort by time period
+        let timePeriods: [(period: String, icon: String, order: Int)] = [
+            ("Morning", "sunrise.fill", 0),
+            ("Afternoon", "sun.max.fill", 1),
+            ("Evening", "sunset.fill", 2),
+            ("Night", "moon.stars.fill", 3)
+        ]
+
+        return timePeriods.compactMap { period in
+            guard let items = grouped[period.period], !items.isEmpty else { return nil }
+            return TimeOfDayGroup(period: period.period, icon: period.icon, items: items)
+        }
+    }
+
+    private func getTimeOfDay(for date: Date) -> String {
+        let hour = calendar.component(.hour, from: date)
+
+        switch hour {
+        case 5..<12:
+            return "Morning"
+        case 12..<17:
+            return "Afternoon"
+        case 17..<21:
+            return "Evening"
+        default:
+            return "Night"
+        }
     }
 
     // MARK: - Helper Methods
@@ -414,11 +523,11 @@ struct WeekDayCell: View {
 
                 Text(dayNumber)
                     .font(.system(size: 22, weight: isSelected ? .bold : .semibold))
-                    .foregroundColor(isSelected ? .white : (isToday ? .blue : .primary))
+                    .foregroundColor(isSelected ? .white : (isToday ? Color.Theme.primary : .primary))
 
                 if hasMedications {
                     Circle()
-                        .fill(isSelected ? Color.white : Color.blue)
+                        .fill(isSelected ? Color.white : Color.Theme.primary)
                         .frame(width: 6, height: 6)
                 } else {
                     Circle()
@@ -429,7 +538,7 @@ struct WeekDayCell: View {
             .frame(width: 70, height: 90)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(isSelected ? Color.blue : (isToday ? Color.blue.opacity(0.1) : Color(.systemGray6)))
+                    .fill(isSelected ? Color.Theme.primary : (isToday ? Color.Theme.primary.opacity(0.1) : Color(.systemGray6)))
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -611,11 +720,11 @@ struct MonthDayCell: View {
             VStack(spacing: 4) {
                 Text(dayNumber)
                     .font(.system(size: 16, weight: isSelected ? .bold : .regular))
-                    .foregroundColor(isSelected ? .white : isToday ? .blue : .primary)
+                    .foregroundColor(isSelected ? .white : isToday ? Color.Theme.primary : .primary)
 
                 if hasMedications {
                     Circle()
-                        .fill(isSelected ? Color.white : Color.blue)
+                        .fill(isSelected ? Color.white : Color.Theme.primary)
                         .frame(width: 4, height: 4)
                 } else {
                     Circle()
@@ -627,7 +736,7 @@ struct MonthDayCell: View {
             .frame(height: 44)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(isSelected ? Color.blue : (isToday ? Color.blue.opacity(0.1) : Color.clear))
+                    .fill(isSelected ? Color.Theme.primary : (isToday ? Color.Theme.primary.opacity(0.1) : Color.clear))
             )
         }
         .buttonStyle(PlainButtonStyle())

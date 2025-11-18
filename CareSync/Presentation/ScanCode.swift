@@ -14,6 +14,8 @@ struct ScanCode: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
+    let initialScanMode: ScanMode
+
     @State private var scannedCode: String?
     @State private var isShowingScanner = false
     @State private var isLoadingMedication = false
@@ -21,13 +23,20 @@ struct ScanCode: View {
     @State private var errorMessage: String?
     @State private var showingMedicationSheet = false
     @State private var scannedText: String?
-    @State private var scanMode: ScanMode = .barcode
+    @State private var scanMode: ScanMode
     @State private var recognizedTextPreview: [String] = []
     @State private var isReadingLabel: Bool = false
+    @State private var showingDuplicateAlert = false
+    @State private var duplicateMedicationName = ""
 
     enum ScanMode {
         case barcode
         case label
+    }
+
+    init(initialScanMode: ScanMode = .barcode) {
+        self.initialScanMode = initialScanMode
+        _scanMode = State(initialValue: initialScanMode)
     }
 
     var body: some View {
@@ -53,7 +62,7 @@ struct ScanCode: View {
 
                         Image(systemName: scanMode == .barcode ? "barcode.viewfinder" : "doc.text.viewfinder")
                             .font(.system(size: 80))
-                            .foregroundColor(.blue)
+                            .foregroundColor(Color.Theme.primary)
 
                         Text(scanMode == .barcode ? "Scan Medication Barcode" : "Scan Prescription Label")
                             .font(.system(size: 28, weight: .bold))
@@ -78,7 +87,7 @@ struct ScanCode: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 32)
                         .padding(.vertical, 16)
-                        .background(Color.blue)
+                        .background(Color.Theme.primary)
                         .cornerRadius(12)
 
                         if let errorMsg = errorMessage {
@@ -101,7 +110,7 @@ struct ScanCode: View {
                                     self.isShowingScanner = true
                                 }
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color.Theme.primary)
                             }
                             .padding()
                             .background(Color(.systemGray6))
@@ -163,6 +172,13 @@ struct ScanCode: View {
                 if let newValue = newValue {
                     parsePrescriptionLabel(text: newValue)
                 }
+            }
+            .alert("Medication Already Added", isPresented: $showingDuplicateAlert) {
+                Button("OK", role: .cancel) {
+                    showingMedicationSheet = false
+                }
+            } message: {
+                Text("'\(duplicateMedicationName)' is already in your medication list.")
             }
         }
     }
@@ -276,15 +292,21 @@ struct ScanCode: View {
     private func saveMedication() {
         guard let medication = scannedMedication else { return }
 
-        modelContext.insert(medication)
+        // Check for duplicates before inserting
+        if modelContext.insertMedicationIfUnique(medication) {
+            // Successfully inserted
+            // Dismiss both sheets
+            showingMedicationSheet = false
+            dismiss()
 
-        // Dismiss both sheets
-        showingMedicationSheet = false
-        dismiss()
-
-        // Reset state
-        scannedMedication = nil
-        scannedCode = nil
+            // Reset state
+            scannedMedication = nil
+            scannedCode = nil
+        } else {
+            // Duplicate found
+            duplicateMedicationName = medication.brandName
+            showingDuplicateAlert = true
+        }
     }
 }
 
@@ -328,9 +350,9 @@ struct ScannerOverlayView: View {
                                 .fill(
                                     LinearGradient(
                                         gradient: Gradient(colors: [
-                                            Color.yellow.opacity(0),
-                                            Color.yellow.opacity(0.8),
-                                            Color.yellow.opacity(0)
+                                            Color.Theme.accent.opacity(0),
+                                            Color.Theme.accent.opacity(0.8),
+                                            Color.Theme.accent.opacity(0)
                                         ]),
                                         startPoint: .top,
                                         endPoint: .bottom
@@ -358,10 +380,10 @@ struct ScannerOverlayView: View {
                                 HStack(spacing: 8) {
                                     ProgressView()
                                         .scaleEffect(0.8)
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .yellow))
+                                        .progressViewStyle(CircularProgressViewStyle(tint: Color.Theme.accent))
                                     Text("Processing label...")
                                         .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.yellow)
+                                        .foregroundColor(Color.Theme.accent)
                                 }
                                 .padding(.horizontal, 24)
                                 .padding(.vertical, 12)
@@ -385,10 +407,10 @@ struct ScannerOverlayView: View {
                                         Text("Capture Label")
                                     }
                                     .font(.system(size: 18, weight: .bold))
-                                    .foregroundColor(.black)
+                                    .foregroundColor(.white)
                                     .padding(.horizontal, 32)
                                     .padding(.vertical, 16)
-                                    .background(Color.yellow)
+                                    .background(Color.Theme.secondary)
                                     .cornerRadius(12)
                                 }
                                 .padding(.top, 8)
@@ -432,7 +454,7 @@ struct CornerBracketsView: View {
                 path.addLine(to: CGPoint(x: 0, y: 0))
                 path.addLine(to: CGPoint(x: 0, y: 30))
             }
-            .stroke(Color.yellow, lineWidth: 4)
+            .stroke(Color.Theme.accent, lineWidth: 4)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
             // Top-right corner
@@ -441,7 +463,7 @@ struct CornerBracketsView: View {
                 path.addLine(to: CGPoint(x: 0, y: 0))
                 path.addLine(to: CGPoint(x: 0, y: 30))
             }
-            .stroke(Color.yellow, lineWidth: 4)
+            .stroke(Color.Theme.accent, lineWidth: 4)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
 
             // Bottom-left corner
@@ -450,7 +472,7 @@ struct CornerBracketsView: View {
                 path.addLine(to: CGPoint(x: 0, y: 0))
                 path.addLine(to: CGPoint(x: 30, y: 0))
             }
-            .stroke(Color.yellow, lineWidth: 4)
+            .stroke(Color.Theme.accent, lineWidth: 4)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
 
             // Bottom-right corner
@@ -459,7 +481,7 @@ struct CornerBracketsView: View {
                 path.addLine(to: CGPoint(x: 0, y: 0))
                 path.addLine(to: CGPoint(x: -30, y: 0))
             }
-            .stroke(Color.yellow, lineWidth: 4)
+            .stroke(Color.Theme.accent, lineWidth: 4)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
         }
     }

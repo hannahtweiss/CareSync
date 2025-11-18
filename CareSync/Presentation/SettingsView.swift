@@ -70,7 +70,7 @@ struct SettingsView: View {
                             Text("Export Data")
                             Spacer()
                             Image(systemName: "square.and.arrow.up")
-                                .foregroundColor(.blue)
+                                .foregroundColor(Color.Theme.primary)
                         }
                     }
 

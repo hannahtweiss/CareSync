@@ -94,12 +94,12 @@ struct AddMedicationSheet: View {
                         // Form Icon Display
                         ZStack {
                             Circle()
-                                .fill(Color.yellow.opacity(0.3))
+                                .fill(selectedColor.colorValue.opacity(0.3))
                                 .frame(width: 120, height: 120)
 
                             Image(systemName: selectedForm.icon)
                                 .font(.system(size: 50))
-                                .foregroundColor(.white)
+                                .foregroundColor(selectedColor.colorValue)
                         }
                         .padding(.vertical, 20)
 
@@ -164,7 +164,7 @@ struct AddMedicationSheet: View {
                             }) {
                                 Image(systemName: "plus.circle.fill")
                                     .font(.system(size: 32))
-                                    .foregroundColor(.yellow)
+                                    .foregroundColor(selectedColor.colorValue)
                             }
                         }
                         .padding()
@@ -231,9 +231,9 @@ struct AddMedicationSheet: View {
                                 }) {
                                     Text("\(times)")
                                         .font(.system(size: 18, weight: .semibold))
-                                        .foregroundColor(timesPerDay == times ? .black : .gray)
+                                        .foregroundColor(timesPerDay == times ? .white : .gray)
                                         .frame(width: 60, height: 60)
-                                        .background(timesPerDay == times ? Color.yellow : Color(.systemGray6))
+                                        .background(timesPerDay == times ? selectedColor.colorValue : Color(.systemGray6))
                                         .cornerRadius(12)
                                 }
                             }
@@ -281,7 +281,7 @@ struct AddMedicationSheet: View {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
                                 Image(systemName: "alarm.fill")
-                                    .foregroundColor(.yellow)
+                                    .foregroundColor(selectedColor.colorValue)
                                 Text("Alarm Times")
                                     .font(.system(size: 20, weight: .semibold))
                                     .foregroundColor(.primary)
@@ -338,7 +338,7 @@ struct AddMedicationSheet: View {
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 18)
-                                .background(Color.blue)
+                                .background(selectedColor.colorValue)
                                 .cornerRadius(16)
                         }
 
@@ -507,7 +507,7 @@ struct FormTypeButton: View {
                     .font(.system(size: 24))
                     .foregroundColor(isSelected ? .white : .gray)
                     .frame(width: 60, height: 60)
-                    .background(isSelected ? Color.yellow : Color(.systemGray6))
+                    .background(isSelected ? Color.Theme.secondary : Color(.systemGray6))
                     .cornerRadius(12)
 
                 Text(form.rawValue)
@@ -538,7 +538,7 @@ struct DayButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(isSelected ? Color(red: 0.2, green: 0.3, blue: 0.3) : Color(.systemGray6))
+            .background(isSelected ? Color.Theme.secondary : Color(.systemGray6))
             .cornerRadius(12)
         }
         .disabled(isDisabled)
@@ -565,12 +565,12 @@ struct ColorButton: View {
 
                 if isSelected {
                     Circle()
-                        .stroke(Color.blue, lineWidth: 3)
+                        .stroke(Color.Theme.secondary, lineWidth: 3)
                         .frame(width: 56, height: 56)
 
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(.blue)
+                        .foregroundColor(Color.Theme.secondary)
                         .background(Circle().fill(Color.white).frame(width: 18, height: 18))
                         .offset(x: 18, y: -18)
                 }

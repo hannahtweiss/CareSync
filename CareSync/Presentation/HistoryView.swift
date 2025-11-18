@@ -37,9 +37,15 @@ struct HistoryView: View {
                             Section(header: Text(dateGroup.key)) {
                                 ForEach(dateGroup.value, id: \.upcCode) { medication in
                                     HStack(spacing: 12) {
-                                        Image(systemName: "pills.fill")
-                                            .font(.system(size: 24))
-                                            .foregroundColor(medication.isActive ? .blue : .gray)
+                                        ZStack {
+                                            Circle()
+                                                .fill(medication.displayColor.opacity(0.2))
+                                                .frame(width: 40, height: 40)
+
+                                            Image(systemName: medication.formIcon)
+                                                .font(.system(size: 20))
+                                                .foregroundColor(medication.displayColor)
+                                        }
 
                                         VStack(alignment: .leading, spacing: 4) {
                                             Text(medication.brandName)

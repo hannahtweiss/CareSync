@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 
 struct MedicationsListView: View {
+    @Environment(\.modelContext) private var modelContext
     @Query(sort: \Medication.brandName) private var allMedications: [Medication]
     @State private var selectedMedication: Medication?
     @State private var showingDetail = false
@@ -35,17 +36,23 @@ struct MedicationsListView: View {
                     }
                 } else {
                     List {
-                        ForEach(allMedications, id: \.upcCode) { medication in
+                        ForEach(allMedications) { medication in
                             Button(action: {
                                 selectedMedication = medication
                                 showingDetail = true
                             }) {
                                 HStack(alignment: .top, spacing: 12) {
-                                    // Status indicator
-                                    Circle()
-                                        .fill(medication.isActive ? Color.green : Color.gray)
-                                        .frame(width: 12, height: 12)
-                                        .padding(.top, 6)
+                                    // Medication icon with color
+                                    ZStack {
+                                        Circle()
+                                            .fill(medication.displayColor.opacity(0.2))
+                                            .frame(width: 44, height: 44)
+
+                                        Image(systemName: medication.formIcon)
+                                            .font(.system(size: 20))
+                                            .foregroundColor(medication.displayColor)
+                                    }
+                                    .padding(.top, 2)
 
                                     VStack(alignment: .leading, spacing: 6) {
                                         Text(medication.brandName)
@@ -70,7 +77,7 @@ struct MedicationsListView: View {
                                                     .foregroundColor(.secondary)
                                                 Text("\(medication.timesPerDay)x/day")
                                                     .font(.system(size: 14))
-                                                    .foregroundColor(.blue)
+                                                    .foregroundColor(Color.Theme.primary)
                                             }
                                         }
                                     }
@@ -85,6 +92,7 @@ struct MedicationsListView: View {
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
+                        .onDelete(perform: deleteMedications)
                     }
                 }
             }
@@ -95,6 +103,15 @@ struct MedicationsListView: View {
                     MedicationDetailView(medication: medication)
                 }
             }
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func deleteMedications(at offsets: IndexSet) {
+        for index in offsets {
+            let medication = allMedications[index]
+            modelContext.delete(medication)
         }
     }
 }
