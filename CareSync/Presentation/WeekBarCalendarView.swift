@@ -12,11 +12,15 @@ struct WeekBarCalendarView: View {
     @Query(filter: #Predicate<Medication> { $0.isActive }, sort: \Medication.brandName)
     private var activeMedications: [Medication]
 
+    @Environment(\.modelContext) private var modelContext
+
     @State private var selectedDate = Date()
     @State private var currentWeekOffset = 0  // Tracks which week we're viewing relative to current week
     @State private var displayMonth = Date()  // The month shown in the header
     @State private var showingMonthView = false  // Toggle between week and month views
     @State private var swipeDirection: SwipeDirection? = nil  // Track swipe animation
+    @State private var medicationToEdit: Medication? = nil
+    @State private var showingEditSheet = false
 
     private let calendar = Calendar.current
     private let totalWeeks = 52  // Show 52 weeks worth of data (1 year)
@@ -171,7 +175,11 @@ struct WeekBarCalendarView: View {
                             ForEach(medicationsForSelectedDay, id: \.medication.upcCode) { item in
                                 MedicationTimeCard(
                                     medication: item.medication,
-                                    times: item.times
+                                    times: item.times,
+                                    onTap: {
+                                        medicationToEdit = item.medication
+                                        showingEditSheet = true
+                                    }
                                 )
                             }
                             .padding(.horizontal)
@@ -218,6 +226,22 @@ struct WeekBarCalendarView: View {
         }
         .onAppear {
             displayMonth = selectedDate
+        }
+        .sheet(isPresented: $showingEditSheet) {
+            if let medication = medicationToEdit {
+                AddMedicationSheet(
+                    medication: medication,
+                    onAdd: { updatedMedication in
+                        // Save changes to the model context
+                        try? modelContext.save()
+                        showingEditSheet = false
+                    },
+                    onCancel: {
+                        // Dismiss without saving
+                        showingEditSheet = false
+                    }
+                )
+            }
         }
     }
 

@@ -139,9 +139,10 @@ struct ScanCode: View {
             }
             .sheet(isPresented: $showingMedicationSheet) {
                 if let medication = scannedMedication {
-                    MedicationDetailSheet(
+                    AddMedicationSheet(
                         medication: medication,
-                        onAdd: {
+                        onAdd: { updatedMedication in
+                            scannedMedication = updatedMedication
                             saveMedication()
                         },
                         onCancel: {

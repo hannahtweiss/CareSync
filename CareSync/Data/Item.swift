@@ -28,6 +28,7 @@ final class Medication {
     var simplifiedInstructions: String
     var isActive: Bool
     var scheduledTimes: [Date]  // Times when medication should be taken each day
+    var color: String?  // Color of the medication
 
     init(
         brandName: String,
@@ -45,7 +46,8 @@ final class Medication {
         timesPerDay: Int = 1,
         simplifiedInstructions: String = "",
         isActive: Bool = true,
-        scheduledTimes: [Date] = []
+        scheduledTimes: [Date] = [],
+        color: String? = nil
     ) {
         self.brandName = brandName
         self.genericName = genericName
@@ -63,6 +65,7 @@ final class Medication {
         self.simplifiedInstructions = simplifiedInstructions
         self.isActive = isActive
         self.scheduledTimes = scheduledTimes.isEmpty ? Medication.generateDefaultTimes(count: timesPerDay) : scheduledTimes
+        self.color = color
     }
 
     // Generate default scheduled times based on timesPerDay

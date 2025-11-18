@@ -30,4 +30,3 @@ struct CareSyncApp: App {
         .modelContainer(sharedModelContainer)
     }
 }
-

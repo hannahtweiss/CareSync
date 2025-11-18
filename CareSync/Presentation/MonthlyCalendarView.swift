@@ -232,6 +232,7 @@ struct DayCell: View {
 struct MedicationTimeCard: View {
     let medication: Medication
     let times: [Date]
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -241,9 +242,14 @@ struct MedicationTimeCard: View {
                     .foregroundColor(.blue)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(medication.brandName)
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.primary)
+                    Button(action: {
+                        onTap?()
+                    }) {
+                        Text(medication.brandName)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(PlainButtonStyle())
 
                     Text(medication.dosage)
                         .font(.system(size: 16))
